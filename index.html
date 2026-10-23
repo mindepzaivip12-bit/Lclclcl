@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Thuật Toán Tài Xỉu Live</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --tai: #ef4444;
+            --xiu: #3b82f6;
+            --green: #10b981;
+            --purple: #8b5cf6;
+            --border: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 15px; display: flex; justify-content: center; }
+        
+        .container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 15px; }
+
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border); }
+        .header h1 { font-size: 16px; font-weight: 700; color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 10px; height: 10px; background-color: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+        /* Tabs */
+        .tabs { display: flex; background: var(--card); border-radius: 12px; padding: 4px; border: 1px solid var(--border); gap: 4px; }
+        .tab-btn {
+            flex: 1; padding: 10px; background: transparent; border: none; border-radius: 8px;
+            color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: 0.2s; font-family: inherit;
+        }
+        .tab-btn.active { background: var(--bg); color: var(--text); box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+        .tab-btn:hover:not(.active) { color: var(--text); }
+
+        /* View containers */
+        .view { display: none; flex-direction: column; gap: 15px; }
+        .view.active { display: flex; }
+        
+        /* Main Prediction Card */
+        .prediction-card { background: var(--card); border-radius: 16px; padding: 20px; border: 1px solid var(--border); text-align: center; position: relative; overflow: hidden; }
+        .phase-info { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+        .prediction-text { font-size: 48px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; line-height: 1; margin: 10px 0; text-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .prediction-text.tai { color: var(--tai); text-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+        .prediction-text.xiu { color: var(--xiu); text-shadow: 0 0 20px rgba(59, 130, 246, 0.4); }
+        .confidence { display: inline-block; background: rgba(255,255,255,0.1); padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; }
+        
+        /* Dice Area */
+        .dice-area { display: flex; justify-content: center; gap: 12px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); }
+        .dice { width: 40px; height: 40px; background: #fff; color: #000; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.2); }
+        .dice-total { display: flex; align-items: center; margin-left: 10px; font-size: 20px; font-weight: bold; color: #fcd34d; }
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .stat-box { background: var(--card); padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
+        .stat-title { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+        .stat-value { font-size: 18px; font-weight: bold; }
+        .text-green { color: var(--green); }
+        .text-red { color: var(--tai); }
+
+        /* History Table */
+        .history-card { background: var(--card); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; height: 320px; }
+        .history-header { padding: 15px; background: rgba(0,0,0,0.2); font-size: 14px; font-weight: bold; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+        .history-list { overflow-y: auto; flex: 1; }
+        .history-list::-webkit-scrollbar { width: 6px; }
+        .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        
+        .history-item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        .history-item:last-child { border-bottom: none; }
+        .h-phase { flex: 1; color: var(--text-muted); }
+        .h-predict { flex: 1; font-weight: bold; }
+        .h-result { flex: 1; font-weight: bold; text-align: center; }
+        .h-status { flex: 1; text-align: right; font-weight: bold; }
+        .status-thang { color: var(--green); }
+        .status-thua { color: var(--tai); }
+        .status-cho { color: #fcd34d; }
+
+        /* Controls */
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        button.action { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; min-width: 110px; }
+        .btn-refresh { background: var(--xiu); color: white; }
+        .btn-refresh:active { transform: scale(0.98); }
+        .btn-mock { background: var(--purple); color: white; }
+        .btn-mock:active { transform: scale(0.98); }
+        .btn-toggle { background: var(--card); color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-toggle.active { background: rgba(16, 185, 129, 0.2); color: var(--green); border-color: var(--green); }
+
+        /* JSON View */
+        .json-toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+        .json-toolbar button {
+            flex: 1; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--text);
+            transition: 0.2s; font-family: inherit; min-width: 80px;
+        }
+        .json-toolbar button:hover { background: #293548; }
+        .json-toolbar button.primary { background: var(--xiu); color: white; border: none; }
+        .json-toolbar button.primary:hover { filter: brightness(1.1); }
+
+        .json-meta {
+            display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 14px;
+            background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+            font-size: 12px; color: var(--text-muted); align-items: center;
+        }
+        .badge { padding: 3px 10px; border-radius: 999px; font-weight: 700; font-size: 11px; font-family: monospace; }
+        .badge.ok { background: rgba(16,185,129,0.15); color: var(--green); }
+        .badge.err { background: rgba(239,68,68,0.15); color: var(--tai); }
+        .badge.info { background: rgba(139,92,246,0.15); color: var(--purple); }
+
+        .json-box {
+            background: #0b1220; border: 1px solid var(--border); border-radius: 12px;
+            padding: 15px; max-height: 65vh; overflow: auto; min-height: 300px;
+        }
+        .json-box::-webkit-scrollbar { width: 8px; height: 8px; }
+        .json-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .json-box pre {
+            margin: 0; font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+            font-size: 12.5px; line-height: 1.65; white-space: pre-wrap; word-break: break-word;
+        }
+        /* Syntax Highlight đơn giản */
+        .tok-key { color: #7dd3fc; }
+        .tok-str { color: #86efac; }
+        .tok-num { color: #fcd34d; }
+        .tok-bool { color: #f472b6; }
+        .tok-null { color: #94a3b8; }
+        .tok-punc { color: #64748b; }
+
+        #error-msg { color: var(--tai); text-align: center; font-size: 13px; display: none; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid var(--tai); }
+        .empty-json { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <h1><div class="status-dot" id="live-dot" style="background:#64748b; box-shadow:none;"></div> Thuật Toán Live</h1>
+        <span id="server-time" style="font-size: 13px; color: var(--text-muted);">--:--:--</span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+        <button class="tab-btn" data-tab="json" onclick="switchTab('json')">{ } JSON View</button>
+    </div>
+
+    <div id="error-msg"></div>
+
+    <!-- ================= VIEW 1: DASHBOARD ================= -->
+    <div class="view active" id="view-dashboard">
+        <div class="prediction-card">
+            <div class="phase-info">Phiên hiện tại: <strong id="current-phase" style="color: #fff;">---</strong></div>
+            <div class="prediction-text" id="prediction">ĐANG TẢI...</div>
+            <div class="confidence">Độ tin cậy: <span id="confidence-val">0%</span></div>
+
+            <div class="dice-area">
+                <div class="dice" id="dice1">-</div>
+                <div class="dice" id="dice2">-</div>
+                <div class="dice" id="dice3">-</div>
+                <div class="dice-total">Tổng: <span id="dice-total" style="margin-left:5px;">-</span></div>
+            </div>
+            <div style="margin-top: 10px; font-size: 13px; color: var(--text-muted);">
+                Kết quả phiên trước: <strong id="prev-result" style="color: #fff;">-</strong>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-title">Thắng / Thua</div>
+                <div class="stat-value"><span class="text-green" id="stat-win">0</span> / <span class="text-red" id="stat-loss">0</span></div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">Tỷ lệ thắng</div>
+                <div class="stat-value" id="stat-rate">0%</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">Chuỗi hiện tại</div>
+                <div class="stat-value" id="stat-streak">0</div>
+            </div>
+        </div>
+
+        <div class="history-card">
+            <div class="history-header">
+                <span style="flex:1;">Phiên</span>
+                <span style="flex:1;">Dự đoán</span>
+                <span style="flex:1; text-align:center;">Kết quả</span>
+                <span style="flex:1; text-align:right;">Trạng thái</span>
+            </div>
+            <div class="history-list" id="history-list">
+                <div style="text-align: center; padding: 20px; color: var(--text-muted);">Đang tải lịch sử...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= VIEW 2: JSON ================= -->
+    <div class="view" id="view-json">
+        <div class="json-meta" id="json-meta">
+            <span class="badge info">CHƯA CÓ DỮ LIỆU</span>
+        </div>
+
+        <div class="json-toolbar">
+            <button onclick="formatJsonView()">✨ Format</button>
+            <button onclick="copyJson()">📋 Copy</button>
+            <button onclick="downloadJson()">💾 Tải JSON</button>
+            <button class="primary" onclick="fetchData()">🔄 Fetch mới</button>
+        </div>
+
+        <div class="json-box">
+            <div class="empty-json" id="json-empty">Chưa có dữ liệu. Bấm "Fetch mới" hoặc nạp JSON mẫu để xem.</div>
+            <pre id="json-display" style="display:none;"></pre>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="action btn-toggle active" id="btn-live" onclick="toggleLive()">⏸ Tạm Dừng Live</button>
+        <button class="action btn-refresh" onclick="fetchData()">🔄 Làm Mới</button>
+        <button class="action btn-mock" onclick="loadMockData()">📝 Nạp JSON Mẫu</button>
+    </div>
+</div>
+
+<script>
+    // ====== CẤU HÌNH ======
+    const API_URL = 'https://wtxmd52.tele68.com/v1/txmd5/lite-sessions?cp=R&cl=R&pf=web&at=ab36a88e2c9868ae0e8bc61adbd18dc';
+
+    let isLive = true;
+    let liveInterval = null;
+    let currentTab = 'dashboard';
+    let lastData = null;      // Dữ liệu JSON đã parse
+    let lastRawText = null;   // Raw text (để xem nếu không phải JSON)
+    let lastMeta = null;      // {status, time, url, isJson, source}
+
+    // ====== CHUYỂN TAB ======
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.tab === tab));
+        document.querySelectorAll('.view').forEach(v =>
+            v.classList.toggle('active', v.id === 'view-' + tab));
+    }
+
+    // ====== GỌI API ======
+    async function fetchData() {
+        const t0 = performance.now();
+        try {
+            const response = await fetch(API_URL, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+            });
+            const ms = Math.round(performance.now() - t0);
+            const text = await response.text();
+
+            let data = null, isJson = true;
+            try { data = text ? JSON.parse(text) : null; }
+            catch { isJson = false; }
+
+            lastData = data;
+            lastRawText = text;
+            lastMeta = {
+                status: response.status,
+                statusText: response.statusText,
+                time: ms,
+                url: API_URL,
+                isJson,
+                source: 'API'
+            };
+
+            if (isJson && data) {
+                renderDashboard(data);
+                renderJsonView(data, true);
+                document.getElementById('error-msg').style.display = 'none';
+                setLiveStatus(true);
+            } else {
+                renderJsonView(text, false);
+                showError('Response không phải JSON hợp lệ.');
+            }
+
+        } catch (error) {
+            const ms = Math.round(performance.now() - t0);
+            lastData = null;
+            lastRawText = String(error);
+            lastMeta = {
+                status: 0, statusText: 'Network / CORS Error',
+                time: ms, url: API_URL, isJson: false, source: 'ERROR'
+            };
+            renderJsonView(String(error), false);
+            showError("Lỗi kết nối API (Có thể do CORS). Bấm 'Nạp JSON Mẫu' để xem giao diện.");
+            setLiveStatus(false);
+        }
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('error-msg');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    function setLiveStatus(online) {
+        const dot = document.getElementById('live-dot');
+        if (online && isLive) {
+            dot.style.background = 'var(--green)';
+            dot.style.boxShadow = '0 0 8px var(--green)';
+        } else {
+            dot.style.background = 'var(--tai)';
+            dot.style.boxShadow = '0 0 8px var(--tai)';
+        }
+    }
+
+    // ====== RENDER DASHBOARD ======
+    function renderDashboard(data) {
+        document.getElementById('server-time').textContent = data.thoi_gian ? data.thoi_gian.split(' ')[1] : '--:--:--';
+        document.getElementById('current-phase').textContent = data.phien_hien_tai || '---';
+
+        const predEl = document.getElementById('prediction');
+        if (data.du_doan) {
+            predEl.textContent = `DỰ ĐOÁN: ${data.du_doan.toUpperCase()}`;
+            predEl.className = `prediction-text ${data.du_doan.toLowerCase() === 'tài' ? 'tai' : 'xiu'}`;
+        } else {
+            predEl.textContent = '---';
+            predEl.className = 'prediction-text';
+        }
+        document.getElementById('confidence-val').textContent = `${data.phan_tram || 0}%`;
+
+        document.getElementById('dice1').textContent = data.xuc_xac1 ?? '-';
+        document.getElementById('dice2').textContent = data.xuc_xac2 ?? '-';
+        document.getElementById('dice3').textContent = data.xuc_xac3 ?? '-';
+        document.getElementById('dice-total').textContent = data.tong ?? '-';
+
+        const prevRes = document.getElementById('prev-result');
+        if (data.ket_qua) {
+            prevRes.textContent = data.ket_qua.toUpperCase();
+            prevRes.style.color = data.ket_qua.toLowerCase() === 'tài' ? 'var(--tai)' : 'var(--xiu)';
+        } else {
+            prevRes.textContent = '-';
+        }
+
+        if (data.thong_ke) {
+            document.getElementById('stat-win').textContent = data.thong_ke.thang ?? 0;
+            document.getElementById('stat-loss').textContent = data.thong_ke.thua ?? 0;
+            document.getElementById('stat-rate').textContent = `${data.thong_ke.ti_le_thang ?? 0}%`;
+            let streak = '0';
+            if (data.thong_ke.chuoi_thang_hien_tai > 0) streak = `T ${data.thong_ke.chuoi_thang_hien_tai}`;
+            else if (data.thong_ke.chuoi_thua_hien_tai > 0) streak = `X ${data.thong_ke.chuoi_thua_hien_tai}`;
+            document.getElementById('stat-streak').textContent = streak;
+        }
+
+        const historyList = document.getElementById('history-list');
+        historyList.innerHTML = '';
+        if (data.lich_su && data.lich_su.length > 0) {
+            data.lich_su.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                const predColor = item.du_doan?.toLowerCase() === 'tài' ? 'var(--tai)' : 'var(--xiu)';
+                const actualColor = item.ket_qua?.toLowerCase() === 'tài' ? 'var(--tai)' :
+                                    item.ket_qua?.toLowerCase() === 'xỉu' ? 'var(--xiu)' : '#fff';
+                let statusClass = 'status-cho', statusText = 'Chờ';
+                if (item.trang_thai === 'thang') { statusClass = 'status-thang'; statusText = 'THẮNG'; }
+                else if (item.trang_thai === 'thua') { statusClass = 'status-thua'; statusText = 'THUA'; }
+
+                div.innerHTML = `
+                    <div class="h-phase">#${item.phien}</div>
+                    <div class="h-predict" style="color:${predColor}">${item.du_doan}</div>
+                    <div class="h-result" style="color:${actualColor}">${item.ket_qua === 'dang_cho' ? '...' : item.ket_qua}</div>
+                    <div class="h-status ${statusClass}">${statusText}</div>
+                `;
+                historyList.appendChild(div);
+            });
+        } else {
+            historyList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">Không có dữ liệu lịch sử</div>';
+        }
+    }
+
+    // ====== RENDER JSON VIEW ======
+    function renderJsonView(data, isJson) {
+        const pre = document.getElementById('json-display');
+        const empty = document.getElementById('json-empty');
+        const meta = document.getElementById('json-meta');
+
+        // Meta badges
+        if (lastMeta) {
+            const cls = lastMeta.status >= 200 && lastMeta.status < 300 ? 'ok' : 'err';
+            const statusTxt = lastMeta.status ? `${lastMeta.status} ${lastMeta.statusText || ''}`.trim() : lastMeta.statusText;
+            meta.innerHTML =
+                `<span class="badge ${cls}">${esc(statusTxt)}</span>` +
+                `<span class="badge info">⏱ ${lastMeta.time} ms</span>` +
+                `<span class="badge info">${lastMeta.isJson ? 'JSON' : 'TEXT'}</span>` +
+                `<span class="badge info">${esc(lastMeta.source)}</span>`;
+        }
+
+        if (data === null || data === undefined || data === '') {
+            pre.style.display = 'none';
+            empty.style.display = 'block';
+            return;
+        }
+
+        empty.style.display = 'none';
+        pre.style.display = 'block';
+
+        if (isJson) {
+            const pretty = JSON.stringify(data, null, 2);
+            pre.innerHTML = syntaxHighlight(pretty);
+        } else {
+            pre.textContent = String(data);
+        }
+    }
+
+    // Escape HTML
+    function esc(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c =>
+            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // Syntax highlight đơn giản cho JSON
+    function syntaxHighlight(json) {
+        return esc(json).replace(
+            /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+            match => {
+                let cls = 'tok-num';
+                if (/^"/.test(match)) {
+                    cls = /:$/.test(match) ? 'tok-key' : 'tok-str';
+                } else if (/true|false/.test(match)) {
+                    cls = 'tok-bool';
+                } else if (/null/.test(match)) {
+                    cls = 'tok-null';
+                }
+                return `<span class="${cls}">${match}</span>`;
+            }
+        ).replace(/([{}[\],])/g, '<span class="tok-punc">$1</span>');
+    }
+
+    function formatJsonView() {
+        if (!lastData) { alert('Chưa có dữ liệu JSON'); return; }
+        renderJsonView(lastData, true);
+    }
+
+    function copyJson() {
+        if (lastData === null && !lastRawText) { alert('Chưa có dữ liệu'); return; }
+        const txt = lastMeta?.isJson ? JSON.stringify(lastData, null, 2) : lastRawText;
+        navigator.clipboard.writeText(txt)
+            .then(() => alert('Đã copy JSON vào clipboard ✔'))
+            .catch(() => alert('Không thể copy'));
+    }
+
+    function downloadJson() {
+        if (lastData === null && !lastRawText) { alert('Chưa có dữ liệu'); return; }
+        const txt = lastMeta?.isJson ? JSON.stringify(lastData, null, 2) : lastRawText;
+        const blob = new Blob([txt], { type: 'application/json;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'ket-qua-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.json';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    // ====== NẠP JSON MẪU ======
+    function loadMockData() {
+        if (isLive) toggleLive();
+        document.getElementById('error-msg').style.display = 'none';
+
+        const mockJson = {
+            "id": "demo-mock-001",
+            "phien_hien_tai": 7111359,
+            "phien_nay": 7111359,
+            "du_doan": "Tài",
+            "phan_tram": 50,
+            "xuc_xac1": 6,
+            "xuc_xac2": 4,
+            "xuc_xac3": 5,
+            "tong": 15,
+            "ket_qua": "Tài",
+            "thoi_gian": "18:45:00 22/10",
+            "thong_ke": {
+                "thang": 2,
+                "thua": 0,
+                "tong": 2,
+                "ti_le_thang": 100,
+                "chuoi_thang_hien_tai": 2,
+                "chuoi_thua_hien_tai": 0
+            },
+            "lich_su": [
+                { "phien": 7111358, "du_doan": "Tài", "phan_tram": 50, "ket_qua": "Tài", "trang_thai": "thang" },
+                { "phien": 7111357, "du_doan": "Xỉu", "phan_tram": 50, "ket_qua": "Xỉu", "trang_thai": "thang" }
+            ]
+        };
+
+        lastData = mockJson;
+        lastRawText = JSON.stringify(mockJson);
+        lastMeta = {
+            status: 200, statusText: 'OK (Mock)',
+            time: 0, url: 'local://mock',
+            isJson: true, source: 'MOCK'
+        };
+
+        renderDashboard(mockJson);
+        renderJsonView(mockJson, true);
+        document.getElementById('server-time').textContent = 'DEMO';
+    }
+
+    // ====== LIVE ======
+    function toggleLive() {
+        const btn = document.getElementById('btn-live');
+        if (isLive) {
+            isLive = false;
+            clearInterval(liveInterval);
+            btn.textContent = '▶ Bật Live';
+            btn.classList.remove('active');
+            setLiveStatus(false);
+        } else {
+            isLive = true;
+            btn.textContent = '⏸ Tạm Dừng Live';
+            btn.classList.add('active');
+            startLive();
+        }
+    }
+
+    function startLive() {
+        fetchData();
+        clearInterval(liveInterval);
+        liveInterval = setInterval(() => {
+            if (isLive) fetchData();
+        }, 5000);
+    }
+
+    // Khởi chạy
+    window.onload = () => {
+        startLive();
+    };
+</script>
+
+</body>
+</html>
